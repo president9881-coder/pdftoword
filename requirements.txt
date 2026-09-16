@@ -1,5 +1,4 @@
-fastapi
-uvicorn[standard]
-python-multipart
-pdf2docx
-python-docx
+Flask==3.0.0
+pdf2docx==0.5.8
+gunicorn==21.2.0
+Werkzeug==3.0.0
