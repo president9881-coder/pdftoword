@@ -1,85 +1,53 @@
 import os
-import shutil
-import tempfile
-from pathlib import Path
-from starlette.background import BackgroundTask
-
-from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from flask import Flask, request, render_template_string, send_file
 from pdf2docx import Converter
-from docx import Document
 
-MAX_FILE_SIZE = 25 * 1024 * 1024
-ALLOWED_ORIGINS = [x.strip() for x in os.getenv("ALLOWED_ORIGINS", "").split(",") if x.strip()]
+app = Flask(__name__)
+os.makedirs('uploads', exist_ok=True)
 
-app = FastAPI(title="PDF to DOCX API", version="1.0.0")
+# This is the simple HTML code for your website's interface
+HTML_PAGE = """
+<!doctype html>
+<html lang="en">
+<head>
+  <title>PDF to Word Converter</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    form { display: inline-block; padding: 20px; border: 1px solid #ccc; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <h1>PDF to Word Converter</h1>
+  <form method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".pdf" required>
+    <br><br>
+    <input type="submit" value="Convert to Word">
+  </form>
+</body>
+</html>
+"""
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=False,
-    allow_methods=["POST", "OPTIONS"],
-    allow_headers=["*"],
-)
+@app.route('/', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        file = request.files['file']
+        if file and file.filename.endswith('.pdf'):
+            pdf_path = os.path.join('uploads', file.filename)
+            docx_filename = file.filename.rsplit('.', 1)[0] + '.docx'
+            docx_path = os.path.join('uploads', docx_filename)
+            
+            # Save the uploaded PDF
+            file.save(pdf_path)
+            
+            # Use the artifexsoftware pdf2docx tool to convert it!
+            cv = Converter(pdf_path)
+            cv.convert(docx_path)
+            cv.close()
+            
+            # Send the finished DOCX back to the user to download
+            return send_file(docx_path, as_attachment=True)
+            
+    return render_template_string(HTML_PAGE)
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-def cleanup(path: Path):
-    shutil.rmtree(path, ignore_errors=True)
-
-@app.post("/convert")
-async def convert_pdf(file: UploadFile = File(...)):
-    filename = file.filename or "document.pdf"
-
-    if not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
-
-    temp_dir = Path(tempfile.mkdtemp(prefix="pdf2docx_"))
-    pdf_path = temp_dir / "input.pdf"
-    docx_path = temp_dir / "converted.docx"
-
-    try:
-        size = 0
-        with pdf_path.open("wb") as output:
-            while True:
-                chunk = await file.read(1024 * 1024)
-                if not chunk:
-                    break
-                size += len(chunk)
-                if size > MAX_FILE_SIZE:
-                    raise HTTPException(status_code=413, detail="The PDF is larger than the 25 MB limit.")
-                output.write(chunk)
-
-        try:
-            converter = Converter(str(pdf_path))
-            converter.convert(str(docx_path))
-            converter.close()
-        except Exception as exc:
-            raise HTTPException(
-                status_code=422,
-                detail="The PDF could not be converted. It may be damaged or use unsupported content."
-            ) from exc
-
-        try:
-            doc = Document(str(docx_path))
-            doc.core_properties.author = "python-docx"
-            doc.save(str(docx_path))
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail="The DOCX metadata could not be updated.") from exc
-
-        return FileResponse(
-            str(docx_path),
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            filename=Path(filename).stem + ".docx",
-            background=BackgroundTask(cleanup, temp_dir),
-        )
-
-    except HTTPException:
-        cleanup(temp_dir)
-        raise
-    except Exception as exc:
-        cleanup(temp_dir)
-        raise HTTPException(status_code=500, detail="Unexpected conversion error.") from exc
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
