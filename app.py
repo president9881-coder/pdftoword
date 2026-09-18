@@ -6,7 +6,16 @@ from pdf2docx import Converter
 app = Flask(__name__)
 os.makedirs('uploads', exist_ok=True)
 
-# Updated HTML layout with a responsive sidebar for ads
+# A list of high quality technology images from Unsplash
+TECH_IMAGES = [
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?w=500&q=80",
+    "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&q=80",
+    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=500&q=80",
+    "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=500&q=80",
+    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&q=80"
+]
+
+# Updated HTML layout with a responsive sidebar for tech images
 HTML_PAGE = """
 <!doctype html>
 <html lang="en">
@@ -77,15 +86,14 @@ HTML_PAGE = """
       </div>
     </div>
 
-    <!-- Sidebar Column for Ads -->
+    <!-- Sidebar Column for Tech Images -->
     <div class="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-6">
-      <div class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2">Advertisement</div>
+      <div class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2"></div>
       
-      <!-- Jinja2 Loop to display 1 or 2 ads randomly -->
-      {% for i in range(num_ads) %}
-      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm h-64 flex flex-col items-center justify-center text-gray-400 relative overflow-hidden">
-        <span class="text-sm font-semibold mb-2">Ad Slot {{ i + 1 }}</span>
-        <span class="text-xs text-center px-4">Replace this div content with your Google AdSense or ad network snippet.</span>
+      <!-- Jinja2 Loop to display the randomly selected images -->
+      {% for img_url in images %}
+      <div class="bg-white border border-gray-200 rounded-xl p-2 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
+        <img src="{{ img_url }}" alt="Technology Scene" class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-500">
       </div>
       {% endfor %}
       
@@ -117,9 +125,11 @@ def upload_file():
             # Send the finished DOCX back to the user to download
             return send_file(docx_path, as_attachment=True)
             
-    # Randomly select 1 or 2 ads to display on the page load
-    ad_count = random.randint(1, 2)
-    return render_template_string(HTML_PAGE, num_ads=ad_count)
+    # Randomly select 1 or 2 unique images from the list on each page load
+    image_count = random.randint(1, 2)
+    selected_images = random.sample(TECH_IMAGES, image_count)
+    
+    return render_template_string(HTML_PAGE, images=selected_images)
 
 if __name__ == '__main__':
     # Dynamically bind to the port Render provides
