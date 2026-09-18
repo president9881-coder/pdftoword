@@ -6,16 +6,16 @@ from pdf2docx import Converter
 app = Flask(__name__)
 os.makedirs('uploads', exist_ok=True)
 
-# A list of high quality technology images from Unsplash
-TECH_IMAGES = [
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?w=500&q=80",
-    "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&q=80",
-    "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=500&q=80",
-    "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=500&q=80",
-    "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&q=80"
+# A list of product-focused images that look like retail/ecommerce advertisements
+AD_IMAGES = [
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80", # Red Nike shoe
+    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80", # Headphones
+    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80", # Smartwatch
+    "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&q=80", # Shopping bags/Sale
+    "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80"  # Polaroid camera
 ]
 
-# Updated HTML layout with a responsive sidebar for tech images
+# Updated HTML layout with a responsive sidebar for ad-like images
 HTML_PAGE = """
 <!doctype html>
 <html lang="en">
@@ -86,15 +86,24 @@ HTML_PAGE = """
       </div>
     </div>
 
-    <!-- Sidebar Column for Tech Images -->
+    <!-- Sidebar Column for Ads -->
     <div class="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-6">
-      <div class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2"></div>
+      <div class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2">Sponsored</div>
       
-      <!-- Jinja2 Loop to display the randomly selected images -->
+      <!-- Jinja2 Loop to display the randomly selected ad images -->
       {% for img_url in images %}
-      <div class="bg-white border border-gray-200 rounded-xl p-2 shadow-sm flex flex-col items-center justify-center relative overflow-hidden group">
-        <img src="{{ img_url }}" alt="Technology Scene" class="w-full h-48 object-cover rounded-lg group-hover:scale-105 transition-transform duration-500">
-      </div>
+      <a href="#" class="block bg-white border border-gray-200 rounded-xl p-2 shadow-sm relative overflow-hidden group cursor-pointer">
+        <!-- Ad Badge -->
+        <span class="absolute top-4 right-4 bg-white/90 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-sm z-10 shadow-sm border border-gray-200 uppercase">Ad</span>
+        
+        <!-- Image -->
+        <img src="{{ img_url }}" alt="Advertisement" class="w-full h-56 object-cover rounded-lg group-hover:scale-105 transition-transform duration-500">
+        
+        <!-- Hover Overlay -->
+        <div class="absolute inset-2 bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <span class="bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded-full shadow-lg">Shop Now</span>
+        </div>
+      </a>
       {% endfor %}
       
     </div>
@@ -125,9 +134,9 @@ def upload_file():
             # Send the finished DOCX back to the user to download
             return send_file(docx_path, as_attachment=True)
             
-    # Randomly select 1 or 2 unique images from the list on each page load
+    # Randomly select 1 or 2 unique ad images from the list on each page load
     image_count = random.randint(1, 2)
-    selected_images = random.sample(TECH_IMAGES, image_count)
+    selected_images = random.sample(AD_IMAGES, image_count)
     
     return render_template_string(HTML_PAGE, images=selected_images)
 
